@@ -3,7 +3,7 @@ ToolHeadMode wheel_action
 ---
 ToolHeadMode pusher_state
 ToolHeadMode wheel_state
-bool sucess
+bool success
 ---
 ToolHeadMode pusher_state
 ToolHeadMode wheel_state

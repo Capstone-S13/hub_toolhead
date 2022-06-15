@@ -34,22 +34,33 @@ class ToolheadActionServer(Node):
         pusher_action_string = ""
         wheel_action_string = ""
         # pusher action
-        if (goal_handle.request.pusher_action == ToolHeadMode.PUSHER_OUT):
+        if (goal_handle.request.pusher_action.operation == ToolHeadMode.PUSHER_OUT):
             pusher_action_string = "Pusher Out"
-        elif (goal_handle.request.pusher_action == ToolHeadMode.PUSHER_IN):
+        elif (goal_handle.request.pusher_action.operation == ToolHeadMode.PUSHER_IN):
             pusher_action_string = "Pusher In"
+        elif (goal_handle.request.pusher_action.operation == ToolHeadMode.PUSHER_MOVING):
+            pusher_action_string = "Pusher Moving"
+        elif (goal_handle.request.pusher_action.operation == ToolHeadMode.PUSHER_IDLE):
+            pusher_action_string = "Pusher Idling"
+        elif (goal_handle.request.pusher_action.operation == ToolHeadMode.ERROR):
+            pusher_action_string = "What?! Why do send it to perform an error?!"
 
-        if (goal_handle.request.wheel_action == ToolHeadMode.SPIN_IN):
+
+        if (goal_handle.request.wheel_action.operation == ToolHeadMode.SPIN_IN):
             wheel_action_string = "Spin In"
-        elif (goal_handle.request.wheel_action == ToolHeadMode.SPIN_OUT):
+        elif (goal_handle.request.wheel_action.operation == ToolHeadMode.SPIN_OUT):
             wheel_action_string = "Spin Out"
+        elif (goal_handle.request.wheel_action.operation == ToolHeadMode.SPIN_IDLE):
+            wheel_action_string = "Spin Idling"
+        elif (goal_handle.request.wheel_action.operation == ToolHeadMode.ERROR):
+            wheel_action_string = "What?! Why do send it to perform an error?!"
 
         self.get_logger().info(f"Executing action: \
             Pusher Action:{pusher_action_string} \
             Spin Action: {wheel_action_string}")
 
-        pusher_cmd = str(goal_handle.request.pusher_action)
-        wheel_cmd = str(goal_handle.request.wheel_action)
+        pusher_cmd = str(goal_handle.request.pusher_action.operation)
+        wheel_cmd = str(goal_handle.request.wheel_action.operation)
 
         feedback = ToolHeadAction.Feedback()
 
@@ -59,29 +70,45 @@ class ToolheadActionServer(Node):
         # wheel
         self.get_logger().info(f"attempting to set {wheel_action_string}")
         try:
-            self.s.write(str.encode(str(wheel_cmd)))
-            feedback.wheel_state = goal_handle.request.wheel_action
+            self.s.write(str.encode(str(wheel_cmd) + '\n'))
+            status = self.s.readline().decode("utf-8","strict").rstrip()
+            # feedback.wheel_state.operation =\
+            #         goal_handle.request.wheel_action.operation
+            if int(status) == goal_handle.request.wheel_action.operation:
+                feedback.wheel_state.operation =\
+                    goal_handle.request.wheel_action.operation
+            else:
+                feedback.wheel_state.operation = ToolHeadMode.ERROR
 
-        except:
+        except Exception as e:
+            self.get_logger().info(f"error: {e}")
             self.get_logger().info(f"failed to serial write to \
                 {wheel_action_string}")
-            feedback.wheel_state = ToolHeadMode.ERROR
+            feedback.wheel_state.operation = ToolHeadMode.ERROR
 
 
         self.get_logger().info(f"attempting to set {pusher_action_string}")
         try:
-            self.s.write(str.encode(str(pusher_cmd)))
-            feedback.pusher_state =\
-                goal_handle.request.pusher_action
-        except:
+            self.s.write(str.encode(str(pusher_cmd) + '\n'))
+            status = self.s.readline().decode("utf-8","strict").rstrip()
+            # feedback.pusher_state.operation =\
+            #         goal_handle.request.pusher_action.operation
+            if int(status) == goal_handle.request.pusher_action.operation:
+                feedback.pusher_state.operation =\
+                    goal_handle.request.pusher_action.operation
+            else:
+                feedback.pusher_state.operation = ToolHeadMode.ERROR
+        except Exception as e:
+            self.get_logger().info(f"error: {e}")
             self.get_logger().info(f"failed to serial write to \
                 {pusher_action_string}")
-            feedback.pusher_state = ToolHeadMode.ERROR
+            feedback.pusher_state.operation = ToolHeadMode.ERROR
 
+        feedback.success = False
         goal_handle.publish_feedback(feedback)
 
         success = False
-        if(feedback.pusher_state == goal_handle.request.pusher_action\
+        if(feedback.pusher_state == goal_handle.request.pusher_action.operation\
             or feedback.wheel_state == goal_handle.request.wheel_action):
             success = True
             goal_handle.succeed()
@@ -89,7 +116,7 @@ class ToolheadActionServer(Node):
         result = ToolHeadAction.Result()
         result.pusher_state = feedback.pusher_state
         result.wheel_state = feedback.wheel_state
-        result.sucess = success
+        result.success = success
         return result
 
     def declare_param(self):
