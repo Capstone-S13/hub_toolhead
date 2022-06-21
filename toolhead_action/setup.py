@@ -25,7 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'toolhead_action_server=toolhead_action.toolhead_action_server:main'
+            'toolhead_action_server=toolhead_action.toolhead_action_server:main',
+            'toolhead_action_client=toolhead_action.toolhead_action_client:main'
         ],
     },
 )

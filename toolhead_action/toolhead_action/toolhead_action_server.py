@@ -105,18 +105,20 @@ class ToolheadActionServer(Node):
             feedback.pusher_state.operation = ToolHeadMode.ERROR
 
         feedback.success = False
-        goal_handle.publish_feedback(feedback)
+        # goal_handle.publish_feedback(feedback)
 
         success = False
-        if(feedback.pusher_state == goal_handle.request.pusher_action.operation\
-            or feedback.wheel_state == goal_handle.request.wheel_action):
+        if(feedback.pusher_state.operation == goal_handle.request.pusher_action.operation\
+            or feedback.wheel_state.operation == goal_handle.request.wheel_action):
             success = True
+            self.get_logger().info("toolhead action succeeded")
             goal_handle.succeed()
 
         result = ToolHeadAction.Result()
-        result.pusher_state = feedback.pusher_state
-        result.wheel_state = feedback.wheel_state
+        result.pusher_state.operation = feedback.pusher_state.operation
+        result.wheel_state.operation = feedback.wheel_state.operation
         result.success = success
+        self.get_logger().info("returning result")
         return result
 
     def declare_param(self):
